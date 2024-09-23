@@ -29,7 +29,10 @@
         android:layout_height="154dp"
         android:alpha="0.8"
         android:background="@color/primaryDarkColor"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/previewView">
 
         <TextView
             android:id="@+id/script_text"

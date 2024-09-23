@@ -42,6 +42,9 @@ import android.hardware.camera2.CameraManager;
 import android.content.Intent;
 
 public class MainActivity extends AppCompatActivity {
+    public static final int STABILIZATION_MODE_ON = 1;
+    public static final int STABILIZATION_MODE_OFF = 0;
+
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private boolean isRecording = false;
     private VideoCapture<Recorder> videoCapture;
@@ -49,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private CameraSelector cameraSelector;
     private boolean isBackCamera = true;
     private boolean isFlashlightOn = false;
+    private boolean isStabilizationOn = false;
     private CameraManager cameraManager;
     private String cameraId;
     private Camera camera;
@@ -62,6 +66,17 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Initialize UI components
+        Button toggleStabilizationButton = findViewById(R.id.toggle_stabilization);
+
+        // Set up the button click listener for the video stabilization button
+        toggleStabilizationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleStabilization();
+            }
+        });
 
         requestPermissionLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(),
@@ -224,6 +239,20 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e("CameraXApp", "Error toggling flashlight", e);
             Toast.makeText(this, "Error toggling flashlight: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void toggleStabilization() {
+        isStabilizationOn = !isStabilizationOn;
+        if (camera != null) {
+            // Enable or disable stabilization for the Video
+            Recorder recorder = new Recorder.Builder()
+                    .setQualitySelector(QualitySelector.from(selectedQuality))
+                    .build();
+            videoCapture = VideoCapture.withOutput(recorder);
+            Toast.makeText(this, "Stabilization " + (isStabilizationOn ? "enabled" : "disabled"), Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Camera is not initialized", Toast.LENGTH_SHORT).show();
         }
     }
 
