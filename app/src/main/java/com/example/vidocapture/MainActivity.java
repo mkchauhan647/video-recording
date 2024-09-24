@@ -5,6 +5,8 @@ import android.widget.EditText;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -25,6 +27,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.io.File;
 import java.util.ArrayList;
@@ -40,6 +43,7 @@ import androidx.camera.video.FileOutputOptions;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
 import android.content.Intent;
+import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
     public static final int STABILIZATION_MODE_ON = 1;
@@ -60,7 +64,11 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar exposureSeekBar;
     private Spinner videoQualitySpinner;
     private Quality selectedQuality = Quality.HIGHEST;
-    private Intent notificationServiceIntent;
+    private CircularProgressIndicator recordingProgressBar;
+    private TextView recordingTime;
+    private Handler handler;
+    private Runnable updateRecordingTimeRunnable;
+    private long startTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,13 +104,14 @@ public class MainActivity extends AppCompatActivity {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA);
         }
 
-        FloatingActionButton fabStartRecording = findViewById(R.id.fab_start_recording);
-        FloatingActionButton fabStopRecording = findViewById(R.id.fab_stop_recording);
+        FloatingActionButton fabRecording = findViewById(R.id.fab_recording);
         FloatingActionButton showBottomSheetButton = findViewById(R.id.show_bottom_sheet_button);
         LinearLayout bottomSheet = findViewById(R.id.bottom_sheet);
         zoomSeekBar = findViewById(R.id.zoomSeekBar);
         exposureSeekBar = findViewById(R.id.exposure_control);
         videoQualitySpinner = findViewById(R.id.video_quality);
+        recordingProgressBar = findViewById(R.id.recording_progress_bar);
+        recordingTime = findViewById(R.id.recording_time);
 
         List<String> supportedQualities = getSupportedQualities();
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, supportedQualities);
@@ -142,8 +151,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        fabStartRecording.setOnClickListener(v -> startRecording());
-        fabStopRecording.setOnClickListener(v -> stopRecording());
+        fabRecording.setOnClickListener(v -> {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+
         showBottomSheetButton.setOnClickListener(v -> {
             if (bottomSheet.getVisibility() == View.GONE) {
                 bottomSheet.setVisibility(View.VISIBLE);
@@ -207,7 +222,21 @@ public class MainActivity extends AppCompatActivity {
         Button resetZoomButton = findViewById(R.id.reset_zoom_button);
         resetZoomButton.setOnClickListener(v -> resetZoom());
 
-        notificationServiceIntent = new Intent(this, NotificationService.class);
+        handler = new Handler(Looper.getMainLooper());
+        updateRecordingTimeRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isRecording) {
+                    long elapsedTime = System.currentTimeMillis() - startTime;
+                    int seconds = (int) (elapsedTime / 1000) % 60;
+                    int minutes = (int) (elapsedTime / (1000 * 60)) % 60;
+                    int hours = (int) (elapsedTime / (1000 * 60 * 60)) % 24;
+                    recordingTime.setText(String.format("%02d:%02d:%02d", hours, minutes, seconds));
+                    recordingProgressBar.setProgress((int) (elapsedTime / 1000));
+                    handler.postDelayed(this, 1000);
+                }
+            }
+        };
     }
 
     private List<String> getSupportedQualities() {
@@ -221,11 +250,29 @@ public class MainActivity extends AppCompatActivity {
         return supportedQualities;
     }
 
+
+
     private boolean isQualitySupported(Quality quality) {
         // Check if the selected quality is supported by the device
         // This is a placeholder implementation, you need to replace it with actual checks
         // based on your device's capabilities
         return true; // Replace with actual check
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (isRecording) {
+            stopRecording();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (isRecording) {
+            stopRecording();
+        }
     }
 
     private void toggleFlashlight() {
@@ -291,7 +338,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void startRecording() {
         showFileNameDialog();
-        startService(notificationServiceIntent);
     }
 
     private void showFileNameDialog() {
@@ -311,22 +357,25 @@ public class MainActivity extends AppCompatActivity {
                             .start(ContextCompat.getMainExecutor(this), videoRecordEvent -> {
                                 if (videoRecordEvent instanceof VideoRecordEvent.Start) {
                                     isRecording = true;
+                                    startTime = System.currentTimeMillis();
+                                    handler.post(updateRecordingTimeRunnable);
                                     toggleRecordingButtons();
-                                    startService(notificationServiceIntent);
                                 } else if (videoRecordEvent instanceof VideoRecordEvent.Finalize) {
                                     isRecording = false;
+                                    handler.removeCallbacks(updateRecordingTimeRunnable);
                                     toggleRecordingButtons();
-                                    stopService(notificationServiceIntent);
                                     if (!((VideoRecordEvent.Finalize) videoRecordEvent).hasError()) {
                                         Toast.makeText(this, "Recording saved: " + videoFile.getAbsolutePath(), Toast.LENGTH_SHORT).show();
                                     } else {
                                         Log.e("CameraXApp", "Recording error: " + ((VideoRecordEvent.Finalize) videoRecordEvent).getError());
+                                        handleRecordingError(videoFile);
                                     }
                                 }
                             });
                 } catch (Exception e) {
                     Log.e("CameraXApp", "Error starting recording", e);
                     Toast.makeText(this, "Error starting recording: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    handleRecordingError(videoFile);
                 }
             } else {
                 Toast.makeText(this, "File name cannot be empty", Toast.LENGTH_SHORT).show();
@@ -337,23 +386,42 @@ public class MainActivity extends AppCompatActivity {
         builder.show();
     }
 
+    private void handleRecordingError(File videoFile) {
+        // Save the recording and reset the state
+        if (recording != null) {
+            recording.stop();
+            recording = null;
+        }
+        Toast.makeText(this, "Recording saved with errors: " + videoFile.getAbsolutePath(), Toast.LENGTH_SHORT).show();
+        resetToInitialState();
+    }
+
+    private void resetToInitialState() {
+        // Reset UI components and state variables to initial state
+        toggleRecordingButtons();
+        resetExposure();
+        resetZoom();
+        recordingTime.setText("00:00:00");
+        recordingProgressBar.setProgress(0);
+        isRecording = false;
+        isFlashlightOn = false;
+        isStabilizationOn = false;
+        startCamera();
+    }
+
     private void stopRecording() {
         if (recording != null) {
             recording.stop();
             recording = null;
-            stopService(notificationServiceIntent);
         }
     }
 
     private void toggleRecordingButtons() {
-        FloatingActionButton fabStartRecording = findViewById(R.id.fab_start_recording);
-        FloatingActionButton fabStopRecording = findViewById(R.id.fab_stop_recording);
+        FloatingActionButton fabRecording = findViewById(R.id.fab_recording);
         if (isRecording) {
-            fabStartRecording.setVisibility(View.GONE);
-            fabStopRecording.setVisibility(View.VISIBLE);
+            fabRecording.setImageResource(R.drawable.ic_stop); // Change icon to stop
         } else {
-            fabStartRecording.setVisibility(View.VISIBLE);
-            fabStopRecording.setVisibility(View.GONE);
+            fabRecording.setImageResource(R.drawable.ic_record); // Change icon to record
         }
     }
 
@@ -378,6 +446,5 @@ public class MainActivity extends AppCompatActivity {
             recording.stop();
             recording = null;
         }
-        stopService(notificationServiceIntent);
     }
 }
