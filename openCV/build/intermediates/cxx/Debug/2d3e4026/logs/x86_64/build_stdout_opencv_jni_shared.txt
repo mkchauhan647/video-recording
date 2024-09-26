@@ -1,0 +1,2 @@
+ninja: Entering directory `C:\Users\Hp\StudioProjects\video-recording-app3\openCV\.cxx\Debug\2d3e4026\x86_64'
+ninja: no work to do.

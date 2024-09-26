@@ -6,18 +6,52 @@
     android:background="@color/backgroundColor"
     tools:context=".MainActivity">
 
-    <!-- Camera Preview -->
-    <androidx.camera.view.PreviewView
-        android:id="@+id/previewView"
+<!--    &lt;!&ndash; Camera Preview &ndash;&gt;-->
+<!--    <androidx.camera.view.PreviewView-->
+<!--        android:id="@+id/previewView"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="0dp"-->
+<!--        android:contentDescription="@string/preview_view_description"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintHorizontal_bias="0.0"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent"-->
+<!--        app:layout_constraintVertical_bias="0.0" />-->
+
+    <!-- FrameLayout for Overlay -->
+    <FrameLayout
+        android:id="@+id/background_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:contentDescription="@string/preview_view_description"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.0" />
+        app:layout_constraintTop_toTopOf="parent">
+
+
+
+        <!-- Camera Preview -->
+        <androidx.camera.view.PreviewView
+            android:id="@+id/previewView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/preview_view_description" />
+
+        <!-- ImageView for overlay (acts as background now) -->
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/solid_color_background"
+            />
+
+    </FrameLayout>
+
+
+
+
 
     <!-- Teleprompter Layout -->
     <LinearLayout
@@ -35,13 +69,13 @@
             android:id="@+id/script_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:accessibilityLiveRegion="polite"
             android:gravity="center"
+            android:importantForAccessibility="yes"
             android:padding="16dp"
             android:text="@string/sample_script"
             android:textColor="@color/white"
-            android:textSize="24sp"
-            android:importantForAccessibility="yes"
-            android:accessibilityLiveRegion="polite" />
+            android:textSize="24sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -55,10 +89,10 @@
                 android:layout_height="wrap_content"
                 android:backgroundTint="@color/primaryColor"
                 android:contentDescription="@string/decrease_speed"
+                android:importantForAccessibility="yes"
                 android:text="-"
                 android:textColor="@color/white"
-                android:textSize="24sp"
-                android:importantForAccessibility="yes" />
+                android:textSize="24sp" />
 
             <Button
                 android:id="@+id/btn_increase_speed"
@@ -66,12 +100,14 @@
                 android:layout_height="wrap_content"
                 android:backgroundTint="@color/primaryColor"
                 android:contentDescription="@string/increase_speed"
+                android:importantForAccessibility="yes"
                 android:text="+"
                 android:textColor="@color/white"
-                android:textSize="24sp"
-                android:importantForAccessibility="yes" />
+                android:textSize="24sp" />
         </LinearLayout>
     </LinearLayout>
+
+
 
     <!-- Floating Action Button for Recording -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -80,22 +116,22 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:contentDescription="@string/start_recording"
+        android:importantForAccessibility="yes"
         android:src="@drawable/ic_record"
         android:tint="@android:color/white"
         app:backgroundTint="@color/secondaryColor"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintVertical_bias="0.9"
-        android:importantForAccessibility="yes" />
+        app:layout_constraintVertical_bias="0.9" />
 
     <TextView
         android:id="@+id/recording_time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="00:00"
-        android:textSize="14sp"
         android:textColor="@android:color/black"
+        android:textSize="14sp"
         app:layout_constraintBottom_toBottomOf="@id/recording_progress_bar"
         app:layout_constraintEnd_toEndOf="@id/recording_progress_bar"
         app:layout_constraintStart_toStartOf="@id/recording_progress_bar"
@@ -106,14 +142,14 @@
         android:layout_width="60dp"
         android:layout_height="50dp"
         android:layout_marginBottom="32dp"
+        android:importantForAccessibility="yes"
+        app:indicatorColor="@color/secondaryColor"
+        app:indicatorSize="80dp"
         app:layout_constraintBottom_toTopOf="@+id/fab_recording"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:importantForAccessibility="yes"
-        app:indicatorSize="80dp"
-        app:trackThickness="8dp"
-        app:indicatorColor="@color/secondaryColor"
-        app:trackColor="@color/primaryColor" />
+        app:trackColor="@color/primaryColor"
+        app:trackThickness="8dp" />
 
     <!-- Button to Show Bottom Sheet -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -122,13 +158,13 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:contentDescription="@string/show_settings"
+        android:importantForAccessibility="yes"
         android:src="@drawable/ic_settings"
         android:tint="@android:color/white"
         app:backgroundTint="@color/secondaryColor"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintVertical_bias="0.8"
-        android:importantForAccessibility="yes" />
+        app:layout_constraintVertical_bias="0.8" />
 
     <!-- Bottom Sheet for Additional Controls -->
     <LinearLayout
@@ -157,6 +193,42 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
+
+                <!-- Spinner for background options -->
+                <Spinner
+                    android:id="@+id/background_spinner"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:entries="@array/background_options"
+                    android:layout_margin="16dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <!-- Buttons to apply solid color or textile background -->
+                <LinearLayout
+                    android:id="@+id/background_buttons"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <!-- Button for changing to solid color -->
+                    <Button
+                        android:id="@+id/btn_solid_color"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/solid_color" />
+
+                    <!-- Button for changing to textile background -->
+                    <Button
+                        android:id="@+id/btn_textile"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/textile_background" />
+                </LinearLayout>
                 <!-- Settings Heading -->
                 <TextView
                     android:id="@+id/settings_heading"
@@ -164,11 +236,11 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:layout_marginBottom="16dp"
+                    android:importantForAccessibility="yes"
                     android:text="@string/settings_heading"
                     android:textColor="@color/textColorPrimary"
                     android:textSize="24sp"
-                    android:textStyle="bold"
-                    android:importantForAccessibility="yes" />
+                    android:textStyle="bold" />
 
                 <!-- Rotate Camera Button -->
                 <Button
@@ -178,9 +250,9 @@
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="@color/secondaryColor"
                     android:contentDescription="@string/rotate_camera"
+                    android:importantForAccessibility="yes"
                     android:text="@string/rotate_camera"
-                    android:textColor="@color/white"
-                    android:importantForAccessibility="yes" />
+                    android:textColor="@color/white" />
 
                 <!-- Flashlight Toggle Button -->
                 <Button
@@ -190,21 +262,21 @@
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="@color/secondaryColor"
                     android:contentDescription="@string/flashlight"
+                    android:importantForAccessibility="yes"
                     android:text="@string/flashlight"
-                    android:textColor="@color/white"
-                    android:importantForAccessibility="yes" />
+                    android:textColor="@color/white" />
 
                 <!-- Change Background Button -->
                 <Button
                     android:id="@+id/change_background"
                     android:layout_width="wrap_content"
-                    android:layout_height="48dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="@color/secondaryColor"
                     android:contentDescription="@string/change_background"
+                    android:importantForAccessibility="yes"
                     android:text="@string/change_background"
-                    android:textColor="@color/white"
-                    android:importantForAccessibility="yes" />
+                    android:textColor="@color/white" />
 
                 <!-- Video Quality Spinner -->
                 <Spinner
@@ -221,41 +293,41 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
+                    android:importantForAccessibility="yes"
                     android:text="@string/manual_focus"
                     android:textColor="@color/textColorPrimary"
-                    android:textSize="16sp"
-                    android:importantForAccessibility="yes" />
+                    android:textSize="16sp" />
 
                 <SeekBar
                     android:id="@+id/manual_focus"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:layout_marginBottom="16dp"
+                    android:importantForAccessibility="yes"
                     android:max="100"
                     android:progressTint="@color/secondaryColor"
-                    android:thumbTint="@color/primaryColor"
-                    android:importantForAccessibility="yes" />
+                    android:thumbTint="@color/primaryColor" />
 
                 <!-- Zoom Level -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
+                    android:importantForAccessibility="yes"
                     android:text="@string/zoom_level"
                     android:textColor="@color/textColorPrimary"
-                    android:textSize="16sp"
-                    android:importantForAccessibility="yes" />
+                    android:textSize="16sp" />
 
                 <SeekBar
                     android:id="@+id/zoomSeekBar"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:layout_marginBottom="16dp"
+                    android:importantForAccessibility="yes"
                     android:max="100"
                     android:progress="0"
                     android:progressTint="@color/secondaryColor"
-                    android:thumbTint="@color/primaryColor"
-                    android:importantForAccessibility="yes" />
+                    android:thumbTint="@color/primaryColor" />
 
                 <Button
                     android:id="@+id/reset_zoom_button"
@@ -264,29 +336,29 @@
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="@color/secondaryColor"
                     android:contentDescription="@string/reset_zoom"
+                    android:importantForAccessibility="yes"
                     android:text="@string/reset_zoom"
-                    android:textColor="@color/white"
-                    android:importantForAccessibility="yes" />
+                    android:textColor="@color/white" />
 
                 <!-- Exposure Control -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
+                    android:importantForAccessibility="yes"
                     android:text="@string/exposure_control"
                     android:textColor="@color/textColorPrimary"
-                    android:textSize="16sp"
-                    android:importantForAccessibility="yes" />
+                    android:textSize="16sp" />
 
                 <SeekBar
                     android:id="@+id/exposure_control"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:layout_marginBottom="16dp"
+                    android:importantForAccessibility="yes"
                     android:max="100"
                     android:progressTint="@color/secondaryColor"
-                    android:thumbTint="@color/primaryColor"
-                    android:importantForAccessibility="yes" />
+                    android:thumbTint="@color/primaryColor" />
 
                 <Button
                     android:id="@+id/reset_button"
@@ -295,9 +367,9 @@
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="@color/secondaryColor"
                     android:contentDescription="@string/reset_exposure"
+                    android:importantForAccessibility="yes"
                     android:text="@string/reset_exposure"
-                    android:textColor="@color/white"
-                    android:importantForAccessibility="yes" />
+                    android:textColor="@color/white" />
 
                 <!-- Video Stabilization Button -->
                 <Button
@@ -307,9 +379,9 @@
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="@color/secondaryColor"
                     android:contentDescription="@string/stabilization"
+                    android:importantForAccessibility="yes"
                     android:text="@string/stabilization"
-                    android:textColor="@color/white"
-                    android:importantForAccessibility="yes" />
+                    android:textColor="@color/white" />
 
                 <!-- Grid Overlay Button -->
                 <Button
@@ -319,9 +391,9 @@
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="@color/secondaryColor"
                     android:contentDescription="@string/grid"
+                    android:importantForAccessibility="yes"
                     android:text="@string/grid"
-                    android:textColor="@color/white"
-                    android:importantForAccessibility="yes" />
+                    android:textColor="@color/white" />
 
                 <!-- Timer Button -->
                 <Button
@@ -331,9 +403,9 @@
                     android:layout_marginBottom="16dp"
                     android:backgroundTint="@color/secondaryColor"
                     android:contentDescription="@string/timer"
+                    android:importantForAccessibility="yes"
                     android:text="@string/timer"
-                    android:textColor="@color/white"
-                    android:importantForAccessibility="yes" />
+                    android:textColor="@color/white" />
 
             </LinearLayout>
         </ScrollView>

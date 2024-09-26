@@ -36,4 +36,14 @@
         <item>UHD</item>
         <item>Highest</item>
     </string-array>
+
+    <string-array name="background_options">
+        <item>Solid Color</item>
+        <item>Blurred Background</item>
+        <item>Textile Pattern</item>
+        <item>Custom Image</item>
+    </string-array>
+
+    <string name="solid_color">Solid Color</string>
+    <string name="textile_background">Textile Background</string>
 </resources>

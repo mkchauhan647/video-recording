@@ -1,6 +1,12 @@
 package com.example.vidocapture;
 
 import android.app.AlertDialog;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.ImageFormat;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
+import android.graphics.drawable.Drawable;
 import android.widget.EditText;
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -10,6 +16,7 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Spinner;
@@ -22,6 +29,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
@@ -29,7 +37,11 @@ import androidx.core.content.ContextCompat;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.common.util.concurrent.ListenableFuture;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -40,14 +52,35 @@ import androidx.camera.video.VideoRecordEvent;
 import androidx.camera.video.QualitySelector;
 import androidx.camera.video.Quality;
 import androidx.camera.video.FileOutputOptions;
-import android.hardware.camera2.CameraAccessException;
+
 import android.hardware.camera2.CameraManager;
-import android.content.Intent;
 import android.widget.TextView;
+
+import org.tensorflow.lite.Interpreter;
+
+
+import android.graphics.Color;
+
+
+import android.content.res.AssetFileDescriptor;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
+
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
+
+import org.opencv.android.OpenCVLoader;
+
 
 public class MainActivity extends AppCompatActivity {
     public static final int STABILIZATION_MODE_ON = 1;
     public static final int STABILIZATION_MODE_OFF = 0;
+
 
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private boolean isRecording = false;
@@ -70,10 +103,19 @@ public class MainActivity extends AppCompatActivity {
     private Runnable updateRecordingTimeRunnable;
     private long startTime;
 
+    private Bitmap currentFrame;
+    private ImageView imageView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (!OpenCVLoader.initDebug()) {
+            Log.e("OpenCV", "Failed to initialize OpenCV");
+        } else {
+            Log.d("OpenCV", "OpenCV initialized successfully");
+        }
 
         // Initialize UI components
         Button toggleStabilizationButton = findViewById(R.id.toggle_stabilization);
@@ -145,11 +187,48 @@ public class MainActivity extends AppCompatActivity {
                 startCamera();
             }
 
+
+
+
+
+
+
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
                 // Do nothing
             }
         });
+
+
+
+        Spinner spinner = findViewById(R.id.background_spinner);
+        Button solidColorButton = findViewById(R.id.btn_solid_color);
+        Button textileButton = findViewById(R.id.btn_textile);
+        imageView = findViewById(R.id.imageView);
+
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                switch (position) {
+                    case 0:
+                        imageView.setImageResource(R.drawable.solid_color_background); // Blurred solid color
+                        break;
+                    case 1:
+                        imageView.setImageResource(R.drawable.textile_background); // Textile background
+                        break;
+                    case 2:
+                        imageView.setImageResource(R.drawable.abstract_background); // Abstract background
+                        break;
+                    // Add more cases as needed
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // Handle case where nothing is selected, if necessary
+            }
+        });
+
 
         fabRecording.setOnClickListener(v -> {
             if (isRecording) {
@@ -336,6 +415,81 @@ public class MainActivity extends AppCompatActivity {
         camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, videoCapture);
     }
 
+//    private void bindPreview(@NonNull ProcessCameraProvider cameraProvider) {
+//        PreviewView previewView = findViewById(R.id.previewView);
+//
+//        // Set up Preview use case
+//        Preview preview = new Preview.Builder().build();
+//        preview.setSurfaceProvider(previewView.getSurfaceProvider());
+//
+//        // Set up the CameraSelector to switch between back and front camera
+//        cameraSelector = new CameraSelector.Builder()
+//                .requireLensFacing(isBackCamera ? CameraSelector.LENS_FACING_BACK : CameraSelector.LENS_FACING_FRONT)
+//                .build();
+//
+//        // Set up VideoCapture use case
+//        Recorder recorder = new Recorder.Builder()
+//                .setQualitySelector(QualitySelector.from(selectedQuality))
+//                .build();
+//        videoCapture = VideoCapture.withOutput(recorder);
+//
+//        // Unbind all use cases before rebinding (to avoid conflicts)
+//        cameraProvider.unbindAll();
+//
+//        try {
+//            if (!isRecording) {
+//                // Set up ImageAnalysis only when not recording
+//                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+//                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+//                        .build();
+//
+//                // Set the analyzer to process each frame
+//                imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), new ImageAnalysis.Analyzer() {
+//                    @Override
+//                    public void analyze(@NonNull ImageProxy image) {
+//                        Bitmap bitmap = imageToBitmap(image);  // Convert ImageProxy to Bitmap
+//                        onCameraFrameCaptured(bitmap);         // Pass the frame for further processing
+//                        image.close();                         // Close the image when done
+//                    }
+//                });
+//
+//                // Bind Preview, VideoCapture, and ImageAnalysis
+//                camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, videoCapture, imageAnalysis);
+//            } else {
+//                // If recording, bind only Preview and VideoCapture
+//                camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, videoCapture);
+//            }
+//        } catch (Exception e) {
+//            Log.e("CameraXApp", "Failed to bind use cases", e);
+//        }
+//    }
+
+    private Bitmap imageToBitmap(ImageProxy image) {
+        ImageProxy.PlaneProxy[] planes = image.getPlanes();
+        ByteBuffer yBuffer = planes[0].getBuffer();
+        byte[] yBytes = new byte[yBuffer.remaining()];
+        yBuffer.get(yBytes);
+
+        ByteBuffer uBuffer = planes[1].getBuffer();
+        byte[] uBytes = new byte[uBuffer.remaining()];
+        uBuffer.get(uBytes);
+
+        ByteBuffer vBuffer = planes[2].getBuffer();
+        byte[] vBytes = new byte[vBuffer.remaining()];
+        vBuffer.get(vBytes); // Read the V plane data
+
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        YuvImage yuvImage = new YuvImage(yBytes, ImageFormat.NV21, width, height, null);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        yuvImage.compressToJpeg(new Rect(0, 0, width, height), 100, out);
+        byte[] imageBytes = out.toByteArray();
+
+        return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+    }
+
+
     private void startRecording() {
         showFileNameDialog();
     }
@@ -447,4 +601,154 @@ public class MainActivity extends AppCompatActivity {
             recording = null;
         }
     }
+
+
+    private void onCameraFrameCaptured(Bitmap frame) {
+        currentFrame = frame;  // Save the captured frame for later processing
+        processFrameForBackgroundChange(frame);
+    }
+
+
+    // Background extended featuress
+
+    private void applyBackgroundChange(String option) {
+        if (camera == null) {
+            Toast.makeText(this, "Camera not initialized", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        switch (option) {
+            case "Blur":
+                applyBlurToBackground();
+                break;
+            case "Solid Color":
+                applySolidColorBackground(Color.GREEN); // example with green color
+                break;
+            case "Textile":
+                applyTextilePatternBackground();
+                break;
+            default:
+                resetBackground();
+                break;
+        }
+    }
+
+    private void applyBlurToBackground() {
+        if (currentFrame == null) {
+            Toast.makeText(this, "No frame to blur", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Mat frameMat = new Mat();
+        Utils.bitmapToMat(currentFrame, frameMat);
+
+        Mat blurredMat = new Mat();
+        Imgproc.GaussianBlur(frameMat, blurredMat, new Size(15, 15), 0);
+
+        Bitmap blurredBitmap = Bitmap.createBitmap(blurredMat.cols(), blurredMat.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(blurredMat, blurredBitmap);
+
+        imageView.setImageBitmap(blurredBitmap);
+    }
+
+    private void applySolidColorBackground(int color) {
+
+        View backgroundView = findViewById(R.id.background_view);
+        if (backgroundView != null) {
+            backgroundView.setBackgroundColor(color);
+            Toast.makeText(this, "Solid color applied", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Background view not found", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void applyTextilePatternBackground() {
+
+        Drawable textilePattern = getResources().getDrawable(R.drawable.textile_background);
+
+        View backgroundView = findViewById(R.id.background_view);
+        if (backgroundView != null && textilePattern != null) {
+            backgroundView.setBackground(textilePattern);
+            Toast.makeText(this, "Textile pattern applied", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Background view or pattern not found", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void resetBackground() {
+
+        View backgroundView = findViewById(R.id.background_view);
+        if (backgroundView != null) {
+            backgroundView.setBackground(null);  // Reset background to transparent
+            Toast.makeText(this, "Background reset", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Background view not found", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+    private Interpreter tflite;
+    private void loadModelFile() {
+        try {
+
+            AssetFileDescriptor fileDescriptor = this.getAssets().openFd("1.tflite"); // deeplabv3 tflite model
+            FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
+            FileChannel fileChannel = inputStream.getChannel();
+            long startOffset = fileDescriptor.getStartOffset();
+            long declaredLength = fileDescriptor.getDeclaredLength();
+            MappedByteBuffer buffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
+            tflite = new Interpreter(buffer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void processFrameForBackgroundChange(Bitmap frame) {
+        if (tflite == null) {
+            loadModelFile();
+        }
+
+        int[] inputShape = tflite.getInputTensor(0).shape();  // Assuming the first input is the image
+        int width = inputShape[1];
+        int height = inputShape[2];
+
+        Bitmap resizedFrame = Bitmap.createScaledBitmap(frame, width, height, true);
+
+        ByteBuffer inputBuffer = convertBitmapToByteBuffer(resizedFrame);
+
+        int[] outputShape = tflite.getOutputTensor(0).shape();
+        ByteBuffer outputBuffer = ByteBuffer.allocateDirect(outputShape[1] * outputShape[2] * 4);
+        outputBuffer.order(ByteOrder.nativeOrder());
+
+        tflite.run(inputBuffer, outputBuffer);
+
+        Bitmap maskBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        outputBuffer.rewind();
+        maskBitmap.copyPixelsFromBuffer(outputBuffer);
+
+        applyBackgroundChange("Blur");
+    }
+
+    private ByteBuffer convertBitmapToByteBuffer(Bitmap bitmap) {
+        ByteBuffer buffer = ByteBuffer.allocateDirect(bitmap.getHeight() * bitmap.getWidth() * 4);
+        buffer.order(ByteOrder.nativeOrder());
+
+        int[] pixels = new int[bitmap.getWidth() * bitmap.getHeight()];
+        bitmap.getPixels(pixels, 0, bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
+
+        for (int pixel : pixels) {
+            buffer.putFloat(((pixel >> 16) & 0xFF) / 255.0f);  // Red
+            buffer.putFloat(((pixel >> 8) & 0xFF) / 255.0f);   // Green
+            buffer.putFloat((pixel & 0xFF) / 255.0f);          // Blue
+        }
+
+        return buffer;
+    }
+
+
+
+
+
 }
+
+

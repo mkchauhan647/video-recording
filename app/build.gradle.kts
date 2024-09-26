@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.AaptOptions
+
 plugins {
     id("com.android.application")  // Apply the Android application plugin
 }
@@ -9,11 +11,19 @@ android {
     defaultConfig {
         applicationId = "com.example.vidocapture"  // Unique application ID
         minSdk = 29  // Minimum SDK version supported
-        targetSdk = 33  // Target SDK version
+        targetSdk = 34  // Target SDK version
         versionCode = 1  // Version code for the app
         versionName = "1.0"  // Version name for the app
+        renderscriptTargetApi = 21
+        renderscriptSupportModeEnabled = true
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"  // Test runner for instrumentation tests
+    }
+
+
+    // Prevents the model from being compressed
+    androidResources {
+        noCompress += "tflite"
     }
 
     buildTypes {
@@ -39,7 +49,8 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.1.0")  // Lifecycle-aware components for CameraX
     implementation("androidx.camera:camera-view:1.1.0")  // View class for CameraX
     implementation("androidx.camera:camera-video:1.1.0")  // Video recording support for CameraX
-    implementation("androidx.camera:camera-extensions:1.1.0")  // Extensions for CameraX
+    implementation("androidx.camera:camera-extensions:1.1.0")
+    implementation(project(":openCV"))  // Extensions for CameraX
 
     testImplementation("junit:junit:4.13.2")  // JUnit for unit testing
     androidTestImplementation("androidx.test.ext:junit:1.1.5")  // AndroidX JUnit extension for Android tests
@@ -50,6 +61,20 @@ dependencies {
     implementation ("androidx.camera:camera-lifecycle:1.0.0")
     implementation ("androidx.camera:camera-video:1.0.0")
     implementation ("com.google.android.material:material:1.4.0")
+
+//    implementation("org.tensorflow:tensorflow-lite:2.9.0") // Check for the latest version
+    implementation ("org.tensorflow:tensorflow-lite:2.10.0")
+
+    implementation("org.tensorflow:tensorflow-lite-gpu:2.10.0") // For GPU support, if needed
+
+    // TensorFlow Lite Support Library for image and model handling
+    implementation("org.tensorflow:tensorflow-lite-support:0.3.1")
+
+
+    // Other dependencies
+    implementation("androidx.appcompat:appcompat:1.3.0")
+    implementation("androidx.core:core-ktx:1.6.0")
+
 
 
 }

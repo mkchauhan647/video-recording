@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "vido capture"
 include(":app")
- 
+include(":openCV")
